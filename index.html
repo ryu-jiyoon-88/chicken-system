@@ -2,53 +2,69 @@
 <html lang="ko">
 <head>
     <meta charset="utf-8">
-    <title>치킨파머스 정산 분석</title>
+    <title>치킨파머스 실적 분석</title>
     <style>
+        /* 초기 코드 노출 방지 및 로딩 화면 스타일 */
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Malgun Gothic', sans-serif; }
-        .spinner { width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #ff7e00; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        .spinner { width: 60px; height: 60px; border: 6px solid #f3f3f3; border-top: 6px solid #ff7e00; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* 파이썬 관련 태그가 화면에 글자로 뜨는 것을 원천 차단 */
+        #timer-text { font-size: 1.5em; font-weight: bold; color: #ff7e00; margin-bottom: 10px; }
+        .sub-text { color: #888; font-size: 0.9em; }
+
+        /* 파이썬 태그 숨김 */
         py-script, py-config, py-loader { display: none !important; }
         #actual-content { visibility: hidden; }
+
+        /* 대시보드 디자인 */
+        body { margin: 0; background: #f0f2f5; font-family: 'Malgun Gothic', sans-serif; }
+        .header { background: white; padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .btn { background: #ff7e00; color: white; padding: 12px 24px; border-radius: 6px; cursor: pointer; border: none; font-weight: bold; }
+        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        h3 { font-size: 1em; border-left: 5px solid #ff7e00; padding-left: 12px; margin-top: 0; color: #333; }
     </style>
     <script defer src="https://pyscript.net/latest/pyscript.js"></script>
 </head>
-<body style="margin: 0; background: #f0f2f5;">
+<body>
 
     <div id="loading-overlay">
         <div class="spinner"></div>
-        <div style="color: #ff7e00; font-weight: bold; font-size: 1.2em;">데이터 분석 도구 로딩 중...</div>
+        <div id="timer-text">로딩 중... <span id="seconds">0</span>초</div>
+        <div class="sub-text">데이터 분석 도구를 준비하고 있습니다.</div>
     </div>
 
-    <div id="actual-content" style="padding: 20px; font-family: 'Malgun Gothic', sans-serif;">
+    <div id="actual-content" style="padding: 20px;">
         <div style="max-width: 1000px; margin: auto;">
-            <div style="background: white; padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                <h2 style="margin:0; font-size:1.3em; color: #333;">📊 실적 분석 대시보드</h2>
+            <div class="header">
+                <h2 style="margin:0; font-size:1.3em;">📊 실적 분석 대시보드</h2>
                 <input type="file" id="upload" style="display:none;" accept=".xlsx">
-                <button onclick="document.getElementById('upload').click()" style="background: #ff7e00; color: white; padding: 12px 24px; border-radius: 6px; cursor: pointer; border: none; font-weight: bold;">엑셀 업로드</button>
+                <button class="btn" onclick="document.getElementById('upload').click()">엑셀 업로드</button>
             </div>
 
-            <div id="dashboard" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
-                <div style="background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <h3 style="font-size: 0.95em; border-left: 4px solid #ff7e00; padding-left: 10px;">📦 수익 TOP 5</h3>
-                    <div id="g1"></div>
-                </div>
-                <div style="background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <h3 style="font-size: 0.95em; border-left: 4px solid #ff7e00; padding-left: 10px;">🥧 매출 구성비</h3>
-                    <div id="g2"></div>
-                </div>
-                <div style="background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <h3 style="font-size: 0.95em; border-left: 4px solid #ff7e00; padding-left: 10px;">🏠 매장별 순위</h3>
-                    <div id="g3"></div>
-                </div>
-                <div style="background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <h3 style="font-size: 0.95em; border-left: 4px solid #ff7e00; padding-left: 10px;">💰 품목별 마진</h3>
-                    <div id="g4"></div>
-                </div>
+            <div class="dashboard">
+                <div class="card"><h3>📦 수익 TOP 5</h3><div id="g1"></div></div>
+                <div class="card"><h3>🥧 매출 구성비</h3><div id="g2"></div></div>
+                <div class="card"><h3>🏠 매장별 순위</h3><div id="g3"></div></div>
+                <div class="card"><h3>💰 제품군별 마진</h3><div id="g4"></div></div>
             </div>
         </div>
     </div>
+
+    <script>
+        // 자바스크립트 타이머 로직
+        let count = 0;
+        const timerElement = document.getElementById('seconds');
+        const interval = setInterval(() => {
+            count++;
+            timerElement.innerText = count;
+        }, 1000);
+
+        // 파이썬 로딩 완료 감지 시 타이머 정지용 함수
+        function stopTimer() {
+            clearInterval(interval);
+        }
+    </script>
 
     <py-config>
         packages = ["pandas", "openpyxl", "matplotlib"]
@@ -58,10 +74,11 @@
         import pandas as pd
         import matplotlib.pyplot as plt
         import io
-        from js import document, Uint8Array, window, Blob
+        from js import document, Uint8Array, window, Blob, stopTimer
         from pyodide.ffi import create_proxy
 
-        # 준비 완료 시 로딩창 걷어내기
+        # 준비 완료 시 실행
+        stopTimer()
         document.getElementById("loading-overlay").style.display = "none"
         document.getElementById("actual-content").style.visibility = "visible"
 
@@ -72,6 +89,7 @@
             b = await f.arrayBuffer()
             df = pd.read_excel(io.BytesIO(b.to_py()))
             
+            # 수익 계산 (PB 17.4% / NB 3%)
             df['profit'] = df.apply(lambda x: x['판매가(부가세별도)'] * 0.174 if 'PB' in str(x.get('구분','')) else x['판매가(부가세별도)'] * 0.03, axis=1)
 
             def draw(fig, tid):
@@ -81,7 +99,7 @@
                 u = window.URL.createObjectURL(Blob.new([Uint8Array.new(buf.getvalue())], {'type':'image/png'}))
                 document.getElementById(tid).innerHTML = f'<img src="{u}" style="width:100%">'
 
-            # 그래프 생성 (속도를 위해 사이즈 조절)
+            # 그래프 4종 생성
             t5 = df.groupby('품목명')['profit'].sum().nlargest(5)
             f1, a1 = plt.subplots(figsize=(5,4)); t5.plot.pie(ax=a1, autopct='%1.1f%%'); draw(f1, "g1")
 
