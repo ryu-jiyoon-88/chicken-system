@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>치킨파머스 정산 시스템</title>
+    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+        .container { max-width: 800px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; }
+        h2 { color: #d32f2f; }
+        input { margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🍗 치킨파머스 본사 정산기</h2>
+        <p>지은 언니, 정산할 엑셀 파일을 아래에 넣어줘!</p>
+        <input type="file" id="file-upload">
+        <div id="output"></div>
+    </div>
+
+    <py-config>
+        packages = ["pandas", "openpyxl"]
+    </py-config>
+
+    <py-script>
+        import pandas as pd
+        from pyodide.http import open_url
+        from js import document, Uint8Array, File
+        import io
+
+        async def process_file(event):
+            file_list = event.target.files
+            if len(file_list) == 0:
+                return
+            
+            file = file_list.item(0)
+            array_buf = await file.arrayBuffer()
+            content = array_buf.to_py()
+            
+            df = pd.read_excel(io.BytesIO(content))
+            
+            # [지은 언니 맞춤 로직]
+            # 1. 비정산(야채류) 제외
+            df = df[~df['구분'].str.contains('야채|비정산', na=False)]
+            
+            # 2. 본사수익 계산 (이미지 기준)
+            # PB는 17.4%, NB는 3.0% 등 조건부 계산 가능
+            total_profit = df['판매가(부가세별도)'].sum() * 0.03 # 예시로 3% 적용
+            
+            output_div = document.getElementById("output")
+            output_div.innerHTML = f"""
+                <div style='background:#f9f9f9; padding:15px; border-radius:5px;'>
+                    <p><b>✅ 계산 완료!</b></p>
+                    <p>정산 대상 품목: {len(df)}개</p>
+                    <p><b>총 본사 수익(예상): {int(total_profit):,}원</b></p>
+                </div>
+            """
+
+        from pyodide.ffi import create_proxy
+        file_event = create_proxy(process_file)
+        document.getElementById("file-upload").addEventListener("change", file_event)
+    </py-script>
+</body>
+</html>
