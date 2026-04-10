@@ -1,54 +1,51 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
     <meta charset="utf-8">
-    <title>치킨파머스 실적 분석기</title>
-    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    <title>치킨파머스 정산 분석</title>
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; background: #f8f9fa; margin: 0; padding: 20px; }
-        .container { max-width: 1200px; margin: auto; }
-        .header { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
-        .upload-btn { background: #e67e22; color: white; padding: 15px 30px; border-radius: 8px; cursor: pointer; border: none; font-weight: bold; }
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Malgun Gothic', sans-serif; }
+        .spinner { width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #ff7e00; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* 대시보드 그리드 */
-        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; opacity: 0; transition: opacity 0.5s; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .card h3 { margin-top: 0; color: #333; border-bottom: 2px solid #f1f1f1; padding-bottom: 10px; font-size: 1.1em; }
-        
-        /* 로딩 숨기기 */
-        py-loader { display: none; }
-        #loading-msg { text-align: center; padding: 50px; color: #e67e22; font-weight: bold; }
+        /* 파이썬 관련 태그가 화면에 글자로 뜨는 것을 원천 차단 */
+        py-script, py-config, py-loader { display: none !important; }
+        #actual-content { visibility: hidden; }
     </style>
+    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <div>
-                <h2 style="margin:0; color:#e67e22;">🍗 치킨파머스 실적 분석 대시보드</h2>
-                <p style="margin:5px 0 0; color:#666;">데이터를 업로드하면 실적 분석 그래프가 즉시 생성됩니다.</p>
-            </div>
-            <input type="file" id="file-upload" style="display:none;" accept=".xlsx">
-            <button class="upload-btn" onclick="document.getElementById('file-upload').click()">엑셀 파일 업로드</button>
-        </div>
+<body style="margin: 0; background: #f0f2f5;">
 
-        <div id="loading-msg">도구를 준비하고 있습니다... 잠시만 기다려주세요.</div>
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div style="color: #ff7e00; font-weight: bold; font-size: 1.2em;">데이터 분석 도구 로딩 중...</div>
+    </div>
 
-        <div id="dashboard" class="dashboard">
-            <div class="card">
-                <h3>📊 [목차 1] 품목별 본사 수익 기여도 (TOP 5)</h3>
-                <div id="graph1"></div>
+    <div id="actual-content" style="padding: 20px; font-family: 'Malgun Gothic', sans-serif;">
+        <div style="max-width: 1000px; margin: auto;">
+            <div style="background: white; padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <h2 style="margin:0; font-size:1.3em; color: #333;">📊 실적 분석 대시보드</h2>
+                <input type="file" id="upload" style="display:none;" accept=".xlsx">
+                <button onclick="document.getElementById('upload').click()" style="background: #ff7e00; color: white; padding: 12px 24px; border-radius: 6px; cursor: pointer; border: none; font-weight: bold;">엑셀 업로드</button>
             </div>
-            <div class="card">
-                <h3>💵 [목차 2] PB vs NB 매출 구성비</h3>
-                <div id="graph2"></div>
-            </div>
-            <div class="card">
-                <h3>🏆 [목차 3] 매장별 발주 실적 순위</h3>
-                <div id="graph3"></div>
-            </div>
-            <div class="card">
-                <h3>📈 [목차 4] 주요 품목 단가 추이</h3>
-                <div id="graph4"></div>
+
+            <div id="dashboard" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+                <div style="background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <h3 style="font-size: 0.95em; border-left: 4px solid #ff7e00; padding-left: 10px;">📦 수익 TOP 5</h3>
+                    <div id="g1"></div>
+                </div>
+                <div style="background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <h3 style="font-size: 0.95em; border-left: 4px solid #ff7e00; padding-left: 10px;">🥧 매출 구성비</h3>
+                    <div id="g2"></div>
+                </div>
+                <div style="background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <h3 style="font-size: 0.95em; border-left: 4px solid #ff7e00; padding-left: 10px;">🏠 매장별 순위</h3>
+                    <div id="g3"></div>
+                </div>
+                <div style="background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <h3 style="font-size: 0.95em; border-left: 4px solid #ff7e00; padding-left: 10px;">💰 품목별 마진</h3>
+                    <div id="g4"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -64,59 +61,39 @@
         from js import document, Uint8Array, window, Blob
         from pyodide.ffi import create_proxy
 
-        # 준비 완료 시 로딩 메시지 숨기기
-        document.getElementById("loading-msg").style.display = "none"
+        # 준비 완료 시 로딩창 걷어내기
+        document.getElementById("loading-overlay").style.display = "none"
+        document.getElementById("actual-content").style.visibility = "visible"
 
-        async def run_analysis(event):
-            file = event.target.files.item(0)
-            if not file: return
+        async def analyze(e):
+            f = e.target.files.item(0)
+            if not f: return
             
-            array_buf = await file.arrayBuffer()
-            df = pd.read_excel(io.BytesIO(array_buf.to_py()))
+            b = await f.arrayBuffer()
+            df = pd.read_excel(io.BytesIO(b.to_py()))
             
-            # 숫자 데이터 정리
-            for c in ['판매가(부가세별도)', '구매가(부가세별도)', '수량']:
-                if c in df.columns: df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
+            df['profit'] = df.apply(lambda x: x['판매가(부가세별도)'] * 0.174 if 'PB' in str(x.get('구분','')) else x['판매가(부가세별도)'] * 0.03, axis=1)
 
-            # 17.4%(PB) vs 3%(NB) 수익 계산
-            df['본사수익'] = df.apply(lambda x: x['판매가(부가세별도)'] * 0.174 if 'PB' in str(x.get('구분','')) else x['판매가(부가세별도)'] * 0.03, axis=1)
-
-            def plot_to_div(fig, div_id):
+            def draw(fig, tid):
                 buf = io.BytesIO()
                 fig.savefig(buf, format='png', bbox_inches='tight')
                 plt.close(fig)
-                url = window.URL.createObjectURL(Blob.new([Uint8Array.new(buf.getvalue())], { 'type': 'image/png' }))
-                document.getElementById(div_id).innerHTML = f'<img src="{url}" style="width:100%">'
+                u = window.URL.createObjectURL(Blob.new([Uint8Array.new(buf.getvalue())], {'type':'image/png'}))
+                document.getElementById(tid).innerHTML = f'<img src="{u}" style="width:100%">'
 
-            # [목차 1] 도넛 차트
-            top5 = df.groupby('품목명')['본사수익'].sum().nlargest(5)
-            fig1, ax1 = plt.subplots()
-            ax1.pie(top5, labels=top5.index, autopct='%1.1f%%', startangle=140, wedgeprops=dict(width=0.3))
-            plot_to_div(fig1, "graph1")
+            # 그래프 생성 (속도를 위해 사이즈 조절)
+            t5 = df.groupby('품목명')['profit'].sum().nlargest(5)
+            f1, a1 = plt.subplots(figsize=(5,4)); t5.plot.pie(ax=a1, autopct='%1.1f%%'); draw(f1, "g1")
 
-            # [목차 2] 파이 차트
-            type_sales = df.groupby('구분')['판매가(부가세별도)'].sum()
-            fig2, ax2 = plt.subplots()
-            ax2.pie(type_sales, labels=type_sales.index, autopct='%1.1f%%')
-            plot_to_div(fig2, "graph2")
+            ts = df.groupby('구분')['판매가(부가세별도)'].sum()
+            f2, a2 = plt.subplots(figsize=(5,4)); ts.plot.pie(ax=a2, autopct='%1.1f%%'); draw(f2, "g2")
 
-            # [목차 3] 바 차트
-            shop_col = '가맹점명' if '가맹점명' in df.columns else '품목명'
-            top_shops = df.groupby(shop_col)['판매가(부가세별도)'].sum().nlargest(5)
-            fig3, ax3 = plt.subplots()
-            top_shops.plot(kind='barh', ax=ax3, color='#e67e22')
-            plot_to_div(fig3, "graph3")
+            sc = '가맹점명' if '가맹점명' in df.columns else '품목명'
+            f3, a3 = plt.subplots(figsize=(5,4)); df.groupby(sc)['판매가(부가세별도)'].sum().nlargest(5).plot.barh(ax=a3, color='#ff7e00'); draw(f3, "g3")
 
-            # [목차 4] 수익성 바 차트
-            margin_compare = df.groupby('구분')['본사수익'].sum()
-            fig4, ax4 = plt.subplots()
-            margin_compare.plot(kind='bar', ax=ax4, color=['#3498db', '#2ecc71'])
-            plot_to_div(fig4, "graph4")
+            f4, a4 = plt.subplots(figsize=(5,4)); df.groupby('구분')['profit'].mean().plot.bar(ax=a4, color=['#3498db','#2ecc71']); draw(f4, "g4")
 
-            document.getElementById("dashboard").style.opacity = "1"
-
-        file_handler = create_proxy(run_analysis)
-        document.getElementById("file-upload").addEventListener("change", file_handler)
+        document.getElementById("upload").addEventListener("change", create_proxy(analyze))
     </py-script>
 </body>
 </html>
